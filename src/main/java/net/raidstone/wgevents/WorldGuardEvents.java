@@ -7,6 +7,7 @@ import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -88,8 +89,13 @@ public class WorldGuardEvents extends JavaPlugin implements Listener {
         if (player == null || !player.isOnline())
             return Collections.emptySet();
         
+        return getRegionsInLoc(player.getLocation());
+    }
+
+    @Nonnull
+    public static Set<ProtectedRegion> getRegionsInLoc(Location loc) {
         RegionQuery query = container.createQuery();
-        ApplicableRegionSet set = query.getApplicableRegions(BukkitAdapter.adapt(player.getLocation()));
+        ApplicableRegionSet set = query.getApplicableRegions(BukkitAdapter.adapt(loc));
         return set.getRegions();
     }
     
@@ -103,6 +109,11 @@ public class WorldGuardEvents extends JavaPlugin implements Listener {
     public static Set<String> getRegionsNames(UUID playerUUID)
     {
         return getRegions(playerUUID).stream().map(ProtectedRegion::getId).collect(Collectors.toSet());
+    }
+    @Nonnull
+    public static Set<String> getRegionsNamesInLoc(Location loc)
+    {
+        return getRegionsInLoc(loc).stream().map(ProtectedRegion::getId).collect(Collectors.toSet());
     }
     
     /**
@@ -162,5 +173,65 @@ public class WorldGuardEvents extends JavaPlugin implements Listener {
     {
         return isPlayerInAllRegions(playerUUID, new HashSet<>(Arrays.asList(regionName)));
     }
-    
+
+
+//////////////////////////////////////////////
+
+    /**
+     * Checks whether a player is in one or several regions
+     *
+     * @param loc location
+     * @param regionNames Set of regions to check.
+     * @return True if the player is in (all) the named region(s).
+     */
+    public static boolean isLocInAllRegions(Location loc, Set<String> regionNames)
+    {
+        Set<String> regions = getRegionsNamesInLoc(loc);
+        if(regionNames.isEmpty()) throw new IllegalArgumentException("You need to check for at least one region !");
+
+        return regions.containsAll(regionNames.stream().map(String::toLowerCase).collect(Collectors.toSet()));
+    }
+
+    /**
+     * Checks whether a player is in one or several regions
+     *
+     * @param loc location.
+     * @param regionNames Set of regions to check.
+     * @return True if the player is in (any of) the named region(s).
+     */
+    public static boolean isLocInAnyRegion(Location loc, Set<String> regionNames)
+    {
+        Set<String> regions = getRegionsNamesInLoc(loc);
+        if(regionNames.isEmpty()) throw new IllegalArgumentException("You need to check for at least one region !");
+        for(String region : regionNames)
+        {
+            if(regions.contains(region.toLowerCase()))
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether a player is in one or several regions
+     *
+     * @param loc location.
+     * @param regionName List of regions to check.
+     * @return True if the player is in (any of) the named region(s).
+     */
+    public static boolean isLocInAnyRegion(Location loc, String... regionName)
+    {
+        return isLocInAnyRegion(loc, new HashSet<>(Arrays.asList(regionName)));
+    }
+
+    /**
+     * Checks whether a player is in one or several regions
+     *
+     * @param loc location.
+     * @param regionName List of regions to check.
+     * @return True if the player is in (any of) the named region(s).
+     */
+    public static boolean isLocInAllRegions(Location loc, String... regionName)
+    {
+        return isLocInAllRegions(loc, new HashSet<>(Arrays.asList(regionName)));
+    }
 }
